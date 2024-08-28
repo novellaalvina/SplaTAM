@@ -475,7 +475,7 @@ def rgbd_slam(config: dict):
         wandb_tracking_step = 0
         wandb_mapping_step = 0
         wandb_run = wandb.init(project=config['wandb']['project'],
-                               entity=config['wandb']['entity'],
+                            #    entity=config['wandb']['entity'],
                                group=config['wandb']['group'],
                                name=config['wandb']['name'],
                                config=config)
