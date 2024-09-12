@@ -5,6 +5,8 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python=3.8
+  - matplotlib=3.5.1
   - cuda-toolkit
   - cudatoolkit=11.6
   - python=3.10
@@ -16,7 +18,6 @@ dependencies:
   - faiss-gpu
   - opencv
   - imageio
-  - matplotlib
   - kornia
   - natsort
   - pyyaml
