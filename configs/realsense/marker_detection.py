@@ -41,7 +41,7 @@ print("fy is: ",fy)
 camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])  # Replace with actual values
 dist_coeffs = np.zeros((5, 1))  # Assuming no distortion, or replace with actual
 marker_length = 200 # pixels
-
+   
 # replacing estimate pose single markers function from aruco since it is deprecated
 def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion):
     '''
@@ -67,8 +67,26 @@ def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion
         trash.append(nada)
     return rvecs, tvecs, trash
 
+# # for transform.json -> pose -> c2w
+# transform = {
+#     "fl_x": 593.8,
+#     "fl_y": 593.8,
+#     "cx": 314.7,
+#     "cy": 243.0,
+#     "w": 640,
+#     "h": 480,
+#     "camera_model": "OPENCV",
+#     "k1": dist_coeffs[0],
+#     "k2": dist_coeffs[1],
+#     "p1": dist_coeffs[2],
+#     "p2": dist_coeffs[3],
+#     "k3": dist_coeffs[4],
+#     "frames": []
+# }
+
 # Loop to continuously get frames
 try:
+    c = 0
     while True:
         frames = pipeline.wait_for_frames()
         color_frame = frames.get_color_frame()
@@ -87,16 +105,47 @@ try:
         corners, ids, rejected = aruco_detector.detectMarkers(gray)
 
         if len(corners) > 0:
+            frame = {}
             # Estimate pose of each marker
             # rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(corners, marker_length, camera_matrix, dist_coeffs)
             rvecs, tvecs, _ = my_estimatePoseSingleMarkers(corners, marker_length, camera_matrix, dist_coeffs)
 
+            # storing the rotation and translation vectors as transformation matrix of each frame into frames in transform
+            frame["file_path"] = "./data/realsense/attempt2"
+            
+            # this transformation matrix will be the camera pose 
+            """ transformation matrix = [
+                [x_0, y_0, z_0, x_tr], 
+                [x_1, y_1, z_1, y_tr], 
+                [x_2, y_2, z_2, z_tr], 
+                [0, 0, 0, 1] # constant
+            ]"""
+
+            # converting rvecs and tvecs from list to numpy array
+            rvecs = np.array(rvecs)
+            tvecs = np.array(tvecs)
+
+            # converting the 3x1 rotational vector to 3x3 matrix 
+            rodrigues = cv2.Rodrigues(rvecs)
+            rvecs_rod = rodrigues[0]
+            
+            # adding the translation x, y, z to each row of rotational matrix
+            tmp = np.concatenate((rvecs_rod, np.reshape(tvecs.T, (3,1))), axis=1)
+            constant_matrix = np.reshape(np.array([0, 0, 0, 1]), (1,4))
+
+            # adding the last row of constant vector to make transformation matrix    
+            transformation_matrix = np.concatenate((tmp, constant_matrix), axis=0)
+            
+            # saving the transformation matrix into npy file. 
+            transformation = np.save("./data/realsense/attempt2/poses/" + f'pose_{c+1:03}.npy', transformation_matrix)
+            
             # Draw detected markers and their axes
             for i in range(len(ids)):
                 cv2.aruco.drawDetectedMarkers(color_image, corners)
                 # cv2.aruco.drawAxis(color_image, camera_matrix, dist_coeffs, rvecs[i], tvecs[i], 0.1)
                 cv2.drawFrameAxes(color_image, camera_matrix, dist_coeffs, rvecs[i], tvecs[i], 0.1)
-
+            
+            c +=1
         # Show the image
         cv2.imshow('RealSense', color_image)
 
