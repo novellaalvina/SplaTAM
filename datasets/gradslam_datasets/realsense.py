@@ -31,7 +31,7 @@ class RealsenseDataset(GradSLAMDataset):
         **kwargs,
     ):
         self.input_folder = os.path.join(basedir, sequence)
-        print("input folder", self.input_folder)
+        # print("input folder", self.input_folder)
         # only poses/images/depth corresponding to the realsense_camera_order are read/used
         self.pose_path = os.path.join(self.input_folder, "poses")
         super().__init__(
@@ -56,18 +56,19 @@ class RealsenseDataset(GradSLAMDataset):
         return color_paths, depth_paths, embedding_paths
 
     def load_poses(self):
-        # posefiles = natsorted(glob.glob(os.path.join(self.pose_path, "*.npy")))
+        posefiles = natsorted(glob.glob(os.path.join(self.pose_path, "*.npy")))
         poses = []
         P = torch.tensor([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]).float()
-        poses.append(P)
-        for pose in range(self.num_imgs):
-            poses.append(torch.eye(4).float())
-        # for posefile in posefiles:
-        #     c2w = torch.from_numpy(np.load(posefile)).float()
-        #     _R = c2w[:3, :3]
-        #     _t = c2w[:3, 3]
-        #     _pose = P @ c2w @ P.T
-        #     poses.append(_pose)
+        # poses.append(P)
+        # for pose in range(self.num_imgs):
+        #     poses.append(torch.eye(4).float())
+        for posefile in posefiles:
+            print(posefile)
+            c2w = torch.from_numpy(np.load(posefile)).float()
+            _R = c2w[:3, :3]
+            _t = c2w[:3, 3]
+            _pose = P @ c2w @ P.T
+            poses.append(_pose)
         return poses
 
     def read_embedding_from_file(self, embedding_file_path):
