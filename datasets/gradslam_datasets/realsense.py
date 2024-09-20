@@ -2,13 +2,11 @@ import glob
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
-
 import numpy as np
 import torch
 from natsort import natsorted
-
+import open3d as o3d
 from .basedataset import GradSLAMDataset
-
 
 class RealsenseDataset(GradSLAMDataset):
     """
@@ -55,20 +53,95 @@ class RealsenseDataset(GradSLAMDataset):
             embedding_paths = natsorted(glob.glob(f"{self.input_folder}/{self.embedding_dir}/*.pt"))
         return color_paths, depth_paths, embedding_paths
 
+    def depth_to_point_cloud(self,pose, depth_image):
+        """Helper function to convert a depth image into a point cloud"""
+        
+        # convert depth image to point cloud using Open3D
+        # Assuming you have a known camera instrinsics matrix
+        camera_intrinsics = o3d.camera.PinholeCameraIntrinsic(width=640, height=480, fx=593.8348999023438, fy=593.8348999023438, cx = 314.661865234375, cy = 242.97659301757812)
+
+        # create point cloud from depth image
+        depth_o3d = o3d.geometry.Image(depth_image)
+        pcd = o3d.geometry.PointCloud.create_from_depth_image(depth_o3d, camera_intrinsics)
+        
+        return pcd
+    
+    def ICP_pose(self, poses, depth_paths):
+        """ Pose drift or misalignment will cause the 3D Gaussians to be incorrectly placed in the map.
+
+            Use loop closure techniques: If you're seeing increasing errors over time (i.e., pose drift), implementing loop closure detection and pose graph optimization can help reduce accumulated errors.
+
+            Refine tracking with ICP (Iterative Closest Point): For more accurate alignment of frames, you can use ICP to refine the pose estimation, which ensures that splats are fused into the correct position.
+        """
+
+        # Perform ICP to refine poses between consecutive frames
+        refined_poses = []
+
+        for i in range(len(poses)-1):
+            # get the current pose and the next pose
+            current_pose = poses[i]
+            next_pose = poses[i+1]
+
+            # convert current and next poses to numpy for ICP processing
+            current_pose_np = current_pose.numpy()
+            next_pose_np = next_pose.numpy()
+
+
+            # get the current depth image
+            print(depth_paths[i])
+            depth_image = o3d.io.read_image(depth_paths[i])
+            
+            # convert depth image to point clouds for ICP
+            pcd_current = self.depth_to_point_cloud(current_pose_np, depth_image)
+            pcd_next = self.depth_to_point_cloud(next_pose_np, depth_image)
+
+            # apply ICP to refine pose
+            icp_result = o3d.pipelines.registration.registration_icp(
+                pcd_current, pcd_next, max_correspondence_distance=0.05, 
+                init=np.eye(4),
+                estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint()
+            )
+
+            # get the refined transformation from ICP
+            refined_transform = torch.from_numpy(icp_result.transformation).float()
+            
+            # update the next pose by applying the refined transformation
+            refined_pose = next_pose @ refined_transform
+
+            # add the refined pose to the refined poses list
+            refined_poses.append(refined_pose)
+        
+        return refined_poses
+
     def load_poses(self):
         posefiles = natsorted(glob.glob(os.path.join(self.pose_path, "*.npy")))
+        
+        icp = True
+        dummy_pose = False
+        
         poses = []
-        P = torch.tensor([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]).float()
-        # poses.append(P)
-        # for pose in range(self.num_imgs):
-        #     poses.append(torch.eye(4).float())
-        for posefile in posefiles:
-            print(posefile)
-            c2w = torch.from_numpy(np.load(posefile)).float()
-            _R = c2w[:3, :3]
-            _t = c2w[:3, 3]
-            _pose = P @ c2w @ P.T
-            poses.append(_pose)
+        # get the depth file paths
+        _, depth_paths, _ = self.get_filepaths()
+
+        P = torch.tensor([[1, 0, 0, 0], 
+                          [0, -1, 0, 0], 
+                          [0, 0, -1, 0], 
+                          [0, 0, 0, 1]]).float()
+        if (dummy_pose):
+            for pose in range(self.num_imgs):
+                poses.append(torch.eye(4).float())
+        else:
+            for posefile in posefiles:
+                print(posefile)
+                c2w = torch.from_numpy(np.load(posefile)).float()
+                _R = c2w[:3, :3]
+                _t = c2w[:3, 3]
+                _pose = P @ c2w @ P.T # transforming the pose to the appropriate coordinate system
+                poses.append(_pose)
+
+            if (icp):
+                poses = self.ICP_pose(poses, depth_paths)
+
         return poses
 
     def read_embedding_from_file(self, embedding_file_path):
