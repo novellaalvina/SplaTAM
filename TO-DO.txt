@@ -1,0 +1,23 @@
+TO-DO:
+1. make a new column in the viz window of the rgb image or raw image
+2. check for other research papers that cite this paper and see what they do or did they encounter this issue
+3. try other configs 
+4. try other things with the camera pose again
+
+PROGRESS LOG:
+1. tracking time step, keyframe number and tracking iteration have been reduced to avoid crashing when running splatam
+2. reduce the number of images (depth and rgb) to avoid crashing when running splatam
+2. depth images has been refined to get brighter depth image 
+3. so far, the best result from the tracking iteration is using the dummy pose with replica/iphone config(i forgot)
+4. using the poses only gets dark result
+5. using ICP refined poses with iphone config results in better result than the poses only. but still dark at the center
+
+when running current splatam, at time step 28 out of 30, error:
+Traceback (most recent call last):
+  File "scripts/splatam.py", line 1014, in <module>
+    shutil.copy(args.experiment, os.path.join(results_dir, "config.py"))
+  File "scripts/splatam.py", line 645, in rgbd_slam
+    for time_idx in tqdm(range(checkpoint_time_idx, num_frames)):
+  File "/home/novellaalvina/Documents/SplaTAMWork/SplaTAM/datasets/gradslam_datasets/basedataset.py", line 322, in __getitem__
+    pose = self.transformed_poses[index]
+IndexError: index 29 is out of bounds for dimension 0 with size 29
