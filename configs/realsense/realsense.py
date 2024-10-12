@@ -3,14 +3,16 @@ import numpy as np
 import cv2
 from cv2 import aruco
 import os
+import json
 
 # Create directories for saving RGB and depth images
-rgb_dir = "../../data/realsense/attempt2/"
-depth_dir = "../../data/realsense/attempt2/"
-pose_dir = "../../data/realsense/attempt2/poses/"
+rgb_dir = "../../data/realsense/attempt7/"
+depth_dir = "../../data/realsense/attempt7/"
+pose_dir = "../../data/realsense/attempt7/poses/"
 
 os.makedirs(rgb_dir, exist_ok=True)
 os.makedirs(depth_dir, exist_ok=True)
+os.makedirs(pose_dir, exist_ok=True)
 
 # Load ArUco marker dictionaries and params
 aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
@@ -42,8 +44,24 @@ print("fy is: ", fy)
 # Camera intrinsic parameters (you can get these from RealSense calibration or the Realsense API)
 camera_matrix = np.array( [[fx, 0, cx], [0, fy, cy], [0, 0, 1]])  # Replace with actual values
 dist_coeffs = np.zeros((5, 1))  # Assuming no distortion, or replace with actual
+
+# # Camera intrinsic parameters (you can get these from RealSense calibration or the Realsense API)
+# camera_matrix = np.array([[576.24724099,   0.0,         271.32821338],
+#                           [  0.0,         541.60133522, 244.86054452],
+#                           [  0.0,           0.0,           1.0        ]])
+# dist_coeffs = np.array([[-8.20169047e-02,  1.15370456e+00,  2.39575069e-03, -1.67432023e-02,-2.87339441e+00]])
+# rvec = np.array([[-0.4762657],[-0.49083823],[-1.77099309]])
+# tvec = np.array([[-0.03250945],[0.12285619], [0.2108607]])
+
 marker_length = 200  # pixels
 
+# json_file_path = 'calibration.json'
+
+# with open(json_file_path, 'r') as file: # Read the JSON file
+#     json_data = json.load(file)
+
+# camera_matrix = np.array(json_data['mtx'])
+# dist_coeffs = np.array(json_data['dist'])
 
 # replacing estimate pose single markers function from aruco since it is deprecated
 def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion):
@@ -104,8 +122,8 @@ try:
         # Apply colormap on depth image (for better visualization)
         # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
         depth_colormap = np.asanyarray(rs.colorizer(2).colorize(depth_frame).get_data())
-        print("depth image", depth_image)
-        print("depth colormap", depth_colormap)
+        # print("depth image", depth_image)
+        # print("depth colormap", depth_colormap)
 
         # Stack both images horizontally
         images = np.hstack((color_image, depth_colormap))
@@ -124,7 +142,7 @@ try:
         # Detect ArUco markers in the image
         aruco_detector = aruco.ArucoDetector(aruco_dict, parameters)
         corners, ids, rejected = aruco_detector.detectMarkers(gray)
-        print(i + 1, "'s corners length", len(corners))
+        # print(i + 1, "'s corners length", len(corners))
 
         if len(corners) > 0:
             # Estimate pose of each marker
@@ -132,15 +150,11 @@ try:
             rvecs, tvecs, _ = my_estimatePoseSingleMarkers(
                 corners, marker_length, camera_matrix, dist_coeffs
             )
-            # cv2.polylines(
-            #         color_frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA
-            #     )
-
+            
             # draw detected markers and their axes
-            for i in range(len(ids)):
-                print(corners)
+            for j in range(len(ids)):
                 cv2.aruco.drawDetectedMarkers(color_image, corners)
-                cv2.drawFrameAxes(color_image, camera_matrix, dist_coeffs, rvecs[i], tvecs[i], 0.1)
+                cv2.drawFrameAxes(color_image, camera_matrix, dist_coeffs, rvecs[j], tvecs[j], 0.1)
 
             # this transformation matrix will be the camera pose
             """ transformation matrix = [
@@ -183,84 +197,3 @@ finally:
     # Stop streaming
     pipeline.stop()
     cv2.destroyAllWindows()
-
-
-# import pyrealsense2 as rs
-# import numpy as np
-# import cv2
-# import os
-
-# # Create directories for saving RGB, depth images, and trajectory
-# rgb_dir = '../data/realsense/attempt1/results'
-# depth_dir = '../data/realsense/attempt1/results'
-# trajectory_file = '../data/realsense/attempt1/traj.txt'
-
-# os.makedirs(rgb_dir, exist_ok=True)
-# os.makedirs(depth_dir, exist_ok=True)
-
-# # Configure depth, color, and pose streams
-# pipeline = rs.pipeline()
-# config = rs.config()
-
-# # Start streaming from depth, color, and pose
-# config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-# config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-# config.enable_stream(rs.stream.pose)  # Enable pose stream
-
-# # Start the pipeline
-# pipeline.start(config)
-
-# # Initialize frame count
-# frame_count = 0
-# max_frames = 100  # Total frames to capture
-
-# # Open a file to save the trajectory data
-# with open(trajectory_file, 'w') as traj_file:
-#     traj_file.write('frame_id, x, y, z, qw, qx, qy, qz\n')  # Header for the trajectory file
-
-#     try:
-#         while frame_count < max_frames:
-#             # Wait for a coherent pair of frames: depth, color, and pose
-#             frames = pipeline.wait_for_frames()
-#             depth_frame = frames.get_depth_frame()
-#             color_frame = frames.get_color_frame()
-#             pose_frame = frames.get_pose_frame()  # Pose frame
-
-#             if not depth_frame or not color_frame or not pose_frame:
-#                 continue
-
-#             # Convert images to numpy arrays
-#             depth_image = np.asanyarray(depth_frame.get_data())
-#             color_image = np.asanyarray(color_frame.get_data())
-
-#             # Save the RGB image
-#             rgb_filename = os.path.join(rgb_dir, f'rgb_{frame_count:03}.png')
-#             cv2.imwrite(rgb_filename, color_image)
-
-#             # Save the depth image (as 16-bit PNG)
-#             depth_filename = os.path.join(depth_dir, f'depth_{frame_count:03}.png')
-#             cv2.imwrite(depth_filename, depth_image)
-
-#             # Get the pose data (position and orientation)
-#             pose_data = pose_frame.get_pose_data()
-
-#             # Extract position and orientation (quaternion)
-#             translation = pose_data.translation
-#             rotation = pose_data.rotation
-#             position = (translation.x, translation.y, translation.z)
-#             orientation = (rotation.w, rotation.x, rotation.y, rotation.z)
-
-#             # Write the pose data to the trajectory file
-#             traj_file.write(f'{frame_count}, {position[0]:.6f}, {position[1]:.6f}, {position[2]:.6f}, '
-#                             f'{orientation[0]:.6f}, {orientation[1]:.6f}, {orientation[2]:.6f}, {orientation[3]:.6f}\n')
-
-#             print(f'Saved frame {frame_count} and trajectory.')
-
-#             # Increment frame count
-#             frame_count += 1
-
-#     finally:
-#         # Stop streaming
-#         pipeline.stop()
-
-# print('Finished capturing 100 frames and trajectory.')
