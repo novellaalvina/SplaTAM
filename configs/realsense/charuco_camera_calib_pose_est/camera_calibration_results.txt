@@ -1,0 +1,30 @@
+Performing camera calibration...
+Calibration successful. Reprojection error: 0.1885044553588789
+Camera matrix: [[622.1596451    0.         340.23462034]
+ [  0.         626.50085526 236.15030033]
+ [  0.           0.           1.        ]]
+Distortion coefficients: [[ 0.15435756 -0.18197283 -0.00063679  0.00337226 -0.50474701]]
+
+Performing camera calibration...
+Calibration successful. Reprojection error: 0.18714816054160885
+Camera matrix: [[666.36096888   0.         324.91950768]
+ [  0.         656.7984199  206.09761739]
+ [  0.           0.           1.        ]]
+Distortion coefficients: [[-2.77076331e-01  6.66014191e+00 -4.15256888e-03  2.23922270e-03
+  -3.12766701e+01]]
+
+Performing camera calibration...
+Calibration successful. Reprojection error: 0.1361702843488731
+Camera matrix: [[576.24724099   0.         271.32821338]
+ [  0.         541.60133522 244.86054452]
+ [  0.           0.           1.        ]]
+Distortion coefficients: [[-8.20169047e-02  1.15370456e+00  2.39575069e-03 -1.67432023e-02
+  -2.87339441e+00]]
+
+rvec: [[-0.4762657 ]
+ [-0.49083823]
+ [-1.77099309]]
+ 
+tvec: [[-0.03250945]
+ [ 0.12285619]
+ [ 0.2108607 ]] 
