@@ -1,23 +1,80 @@
-TO-DO:
-1. make a new column in the viz window of the rgb image or raw image
-2. check for other research papers that cite this paper and see what they do or did they encounter this issue
-3. try other configs 
-4. try other things with the camera pose again
+PLAN:
+1. Run RealSense SLAM as a Pose Estimator: Run the RealSense SLAM node to get accurate pose information from the D435i.
+2. Feed Pose to SplaTAM: Modify SplaTAM to accept the pose information from the RealSense SLAM library instead of estimating it internally.
+3. Visual-Inertial Fusion: Let the RealSense SLAM handle pose tracking and use this fused information for SplaTAM’s dense RGB-D mapping and tracking tasks.
 
 PROGRESS LOG:
+D415c
 1. tracking time step, keyframe number and tracking iteration have been reduced to avoid crashing when running splatam
 2. reduce the number of images (depth and rgb) to avoid crashing when running splatam
 2. depth images has been refined to get brighter depth image 
 3. so far, the best result from the tracking iteration is using the dummy pose with replica/iphone config(i forgot)
 4. using the poses only gets dark result
 5. using ICP refined poses with iphone config results in better result than the poses only. but still dark at the center
+6. calibrated camera using opencv charuco board and got camera matrix and dist coeff with error percentage 13%
 
-when running current splatam, at time step 28 out of 30, error:
-Traceback (most recent call last):
-  File "scripts/splatam.py", line 1014, in <module>
-    shutil.copy(args.experiment, os.path.join(results_dir, "config.py"))
-  File "scripts/splatam.py", line 645, in rgbd_slam
-    for time_idx in tqdm(range(checkpoint_time_idx, num_frames)):
-  File "/home/novellaalvina/Documents/SplaTAMWork/SplaTAM/datasets/gradslam_datasets/basedataset.py", line 322, in __getitem__
-    pose = self.transformed_poses[index]
-IndexError: index 29 is out of bounds for dimension 0 with size 29
+D435if
+1. make the scripts to capture rbg and depth images and stream the accel and gryo data from the streaming camera 
+
+TO DO:
+1. Check out the Realsense SLAM tutorial
+
+
+RECORDS LOG:
+
+D415c
+Attempt 11:
+fx: 593.8348999023438
+fy: 593.8348999023438
+cx: 314.661865234375
+cy: 242.97659301757812
+https://wandb.ai/u1413401-university-of-utah/SplaTAM/runs/6mmhqjna?nw=nwuseru1413401
+
+D435if
+Attempt 12:
+cx: 324.07073974609375
+cy: 241.47283935546875
+fx: 386.21771240234375
+fy: 386.21771240234375
+
+Issue Post:
+hi, I'm trying to run splatam on a realsense D415c camera. It works but I've been having this issue where there is a black hole at the middle if I use the pose calculation from the algorithm you provided, which is:
+datasets/gradslam_datasets/realsense.py
+for posefile in posefiles:
+                # print(posefile)
+                c2w = torch.from_numpy(np.load(posefile)).float()
+                _R = c2w[:3, :3]
+                _t = c2w[:3, 3]
+                _pose = P @ c2w @ P.T # transforming the pose to the appropriate coordinate system
+                poses.append(_pose)
+
+Right now, I'm using iphone config and here is what I've tried so far:
+  1. try recording from one angle
+  2. try recording while also moving
+  3. try recording not with a black or white background
+  3. use dummy pose = torch.eye(4) as you suggested in the post above 
+  4. set use_gt_pose = True in the config file as you also suggested in the post above
+
+Results:
+  1. if use_gt_pose = False as default with non-blackorwhite background:
+     Tracking result can only be seen using visualize_tracking_loss=True in the config file, because at iteration 30ish, it freezes the computer. It has some little black holes at the beginning but after several keyframe iteration 
+     it shifts and eventually the results kind of look like attempt 4
+     before pic 
+     after pic
+
+  2. if use_gt_pose = False with white background:
+     Tracking result can only be seen using visualize_tracking_loss=True in the config file, because at iteration 30ish, it freezes the computer. 
+     pic
+     
+  3. if use_gt_pose = True:
+      no freezes:
+      Attempt 2: fixed spot - dummy pose
+      pic
+
+      Attempt 4: fixed spot - c2w transform pose
+      pic 
+
+      Attempt 5: moving - dummy pose
+      pic
+  
+  Do you have any suggestions on what I should do to refine the results?
