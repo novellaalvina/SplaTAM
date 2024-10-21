@@ -6,9 +6,9 @@ import os
 import json
 
 # Create directories for saving RGB and depth images
-rgb_dir = "../../data/realsense/attempt7/"
-depth_dir = "../../data/realsense/attempt7/"
-pose_dir = "../../data/realsense/attempt7/poses/"
+rgb_dir = "../../data/realsense/attempt12/"
+depth_dir = "../../data/realsense/attempt12/"
+pose_dir = "../../data/realsense/attempt12/poses/"
 
 os.makedirs(rgb_dir, exist_ok=True)
 os.makedirs(depth_dir, exist_ok=True)
@@ -30,28 +30,31 @@ config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)  # Depth stre
 # Start streaming
 profile = pipeline.start(config)
 
-intr = profile.get_stream(rs.stream.depth).as_video_stream_profile().get_intrinsics()
-fx = intr.fx
-fy = intr.fy
-cx = intr.ppx
-cy = intr.ppy
+streaming_intrinsic = True
+if streaming_intrinsic:
+    intr = profile.get_stream(rs.stream.depth).as_video_stream_profile().get_intrinsics()
+    fx = intr.fx
+    fy = intr.fy
+    cx = intr.ppx
+    cy = intr.ppy
 
-print("cx is: ", cx)
-print("cy is: ", cy)
-print("fx is: ", fx)
-print("fy is: ", fy)
+    print("cx is: ", cx)
+    print("cy is: ", cy)
+    print("fx is: ", fx)
+    print("fy is: ", fy)
 
-# Camera intrinsic parameters (you can get these from RealSense calibration or the Realsense API)
-camera_matrix = np.array( [[fx, 0, cx], [0, fy, cy], [0, 0, 1]])  # Replace with actual values
-dist_coeffs = np.zeros((5, 1))  # Assuming no distortion, or replace with actual
+    # Camera intrinsic parameters (you can get these from RealSense calibration or the Realsense API)
+    camera_matrix = np.array( [[fx, 0, cx], [0, fy, cy], [0, 0, 1]])  # Replace with actual values
+    dist_coeffs = np.zeros((5, 1))  # Assuming no distortion, or replace with actual
 
-# # Camera intrinsic parameters (you can get these from RealSense calibration or the Realsense API)
-# camera_matrix = np.array([[576.24724099,   0.0,         271.32821338],
-#                           [  0.0,         541.60133522, 244.86054452],
-#                           [  0.0,           0.0,           1.0        ]])
-# dist_coeffs = np.array([[-8.20169047e-02,  1.15370456e+00,  2.39575069e-03, -1.67432023e-02,-2.87339441e+00]])
-# rvec = np.array([[-0.4762657],[-0.49083823],[-1.77099309]])
-# tvec = np.array([[-0.03250945],[0.12285619], [0.2108607]])
+else:
+    # Camera intrinsic parameters (you can get these from RealSense calibration or the Realsense API)
+    camera_matrix = np.array([[576.24724099,   0.0,         271.32821338],
+                              [  0.0,         541.60133522, 244.86054452],
+                              [  0.0,           0.0,           1.0        ]])
+    dist_coeffs = np.array([[-8.20169047e-02,  1.15370456e+00,  2.39575069e-03, -1.67432023e-02,-2.87339441e+00]])
+    rvec = np.array([[-0.4762657],[-0.49083823],[-1.77099309]])
+    tvec = np.array([[-0.03250945],[0.12285619], [0.2108607]])
 
 marker_length = 200  # pixels
 
@@ -96,9 +99,9 @@ def my_estimatePoseSingleMarkers(corners, marker_size, camera_matrix, distortion
     return rvecs, tvecs, trash
 
 # create filters for depth preprocessing
-spatial_filter = rs.spatial_filter()
-temporal_filter = rs.temporal_filter()
-hole_filling_filter = rs.hole_filling_filter()
+# spatial_filter = rs.spatial_filter()
+# temporal_filter = rs.temporal_filter()
+# hole_filling_filter = rs.hole_filling_filter()
 
 try:
     for i in range(100):
@@ -111,9 +114,9 @@ try:
             continue
         
         # apply filters for depth processing
-        depth_frame = spatial_filter.process(depth_frame)
-        depth_frame = temporal_filter.process(depth_frame)
-        depth_frame = hole_filling_filter.process(depth_frame)
+        # depth_frame = spatial_filter.process(depth_frame)
+        # depth_frame = temporal_filter.process(depth_frame)
+        # depth_frame = hole_filling_filter.process(depth_frame)
 
         # Convert images to numpy arrays
         depth_image = np.asanyarray(depth_frame.get_data())
@@ -150,7 +153,9 @@ try:
             rvecs, tvecs, _ = my_estimatePoseSingleMarkers(
                 corners, marker_length, camera_matrix, dist_coeffs
             )
-            
+            print("rvecs", np.shape(rvecs))
+            print("tvecs", np.shape(tvecs))
+
             # draw detected markers and their axes
             for j in range(len(ids)):
                 cv2.aruco.drawDetectedMarkers(color_image, corners)
