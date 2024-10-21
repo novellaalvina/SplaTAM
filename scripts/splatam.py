@@ -36,7 +36,6 @@ from utils.slam_external import calc_ssim, build_rotation, prune_gaussians, dens
 
 from diff_gaussian_rasterization import GaussianRasterizer as Renderer
 
-
 def get_dataset(config_dict, basedir, sequence, **kwargs):
     if config_dict["dataset_name"].lower() in ["icl"]:
         return ICLDataset(config_dict, basedir, sequence, **kwargs)
@@ -291,7 +290,7 @@ def get_loss(params, curr_data, variables, iter_time_idx, loss_weights, use_sil_
 
     # Visualize the Diff Images
     if tracking and visualize_tracking_loss:
-        fig, ax = plt.subplots(2, 5, figsize=(12, 6))
+        fig, ax = plt.subplots(2, 4, figsize=(12, 6))
         weighted_render_im = im * color_mask
         weighted_im = curr_data['im'] * color_mask
         weighted_render_depth = depth * mask
@@ -316,8 +315,8 @@ def get_loss(params, curr_data, variables, iter_time_idx, loss_weights, use_sil_
         ax[0, 3].set_title("Silhouette Mask")
         ax[1, 3].imshow(mask[0].detach().cpu(), cmap="gray")
         ax[1, 3].set_title("Loss Mask")
-        ax[0, 4].imshow(curr_data['im'])
-        ax[0, 4].set_title("RGB Raw Image")
+        # ax[0, 4].imshow(curr_data['im'])
+        # ax[0, 4].set_title("RGB Raw Image")
         # Turn off axis
         for i in range(2):
             for j in range(4):
