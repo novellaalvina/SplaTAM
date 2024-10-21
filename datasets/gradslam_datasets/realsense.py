@@ -52,9 +52,9 @@ class RealsenseDataset(GradSLAMDataset):
         if self.load_embeddings:
             embedding_paths = natsorted(glob.glob(f"{self.input_folder}/{self.embedding_dir}/*.pt"))
         return color_paths, depth_paths, embedding_paths
-
+    
+    """Helper function to convert a depth image into a point cloud"""
     def depth_to_point_cloud(self,pose, depth_image):
-        """Helper function to convert a depth image into a point cloud"""
         
         # convert depth image to point cloud using Open3D
         # Assuming you have a known camera instrinsics matrix
@@ -66,13 +66,13 @@ class RealsenseDataset(GradSLAMDataset):
         
         return pcd
     
+    """ Pose drift or misalignment will cause the 3D Gaussians to be incorrectly placed in the map.
+
+        Use loop closure techniques: If you're seeing increasing errors over time (i.e., pose drift), implementing loop closure detection and pose graph optimization can help reduce accumulated errors.
+
+        Refine tracking with ICP (Iterative Closest Point): For more accurate alignment of frames, you can use ICP to refine the pose estimation, which ensures that splats are fused into the correct position.
+    """    
     def ICP_pose(self, poses, depth_paths):
-        """ Pose drift or misalignment will cause the 3D Gaussians to be incorrectly placed in the map.
-
-            Use loop closure techniques: If you're seeing increasing errors over time (i.e., pose drift), implementing loop closure detection and pose graph optimization can help reduce accumulated errors.
-
-            Refine tracking with ICP (Iterative Closest Point): For more accurate alignment of frames, you can use ICP to refine the pose estimation, which ensures that splats are fused into the correct position.
-        """
 
         # Perform ICP to refine poses between consecutive frames
         refined_poses = []
@@ -85,7 +85,6 @@ class RealsenseDataset(GradSLAMDataset):
             # convert current and next poses to numpy for ICP processing
             current_pose_np = current_pose.numpy()
             next_pose_np = next_pose.numpy()
-
 
             # get the current depth image
             print(depth_paths[i])
@@ -116,7 +115,7 @@ class RealsenseDataset(GradSLAMDataset):
     def load_poses(self):
         posefiles = natsorted(glob.glob(os.path.join(self.pose_path, "*.npy")))
         
-        icp = True
+        icp = False
         dummy_pose = False
         
         poses = []
@@ -130,9 +129,11 @@ class RealsenseDataset(GradSLAMDataset):
         if (dummy_pose):
             for pose in range(self.num_imgs):
                 poses.append(torch.eye(4).float())
+            # for pose in range(self.num_imgs):
+            #     poses.append(torch.zeros(4, 4))
         else:
             for posefile in posefiles:
-                print(posefile)
+                # print(posefile)
                 c2w = torch.from_numpy(np.load(posefile)).float()
                 _R = c2w[:3, :3]
                 _t = c2w[:3, 3]
@@ -142,6 +143,7 @@ class RealsenseDataset(GradSLAMDataset):
             if (icp):
                 poses = self.ICP_pose(poses, depth_paths)
 
+        # print(poses)
         return poses
 
     def read_embedding_from_file(self, embedding_file_path):
