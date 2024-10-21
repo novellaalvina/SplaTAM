@@ -5,7 +5,7 @@ primary_device = "cuda:0"
 seed = 0
 
 base_dir = "./experiments/realsense"  # Root Directory to Save iPhone Dataset
-scene_name = "attempt2"  # Scan Name
+scene_name = "attempt9"  # Scan Name
 num_frames = 30  # Desired number of frames to capture
 depth_scale = 10.0  # Depth Scale used when saving depth
 overwrite = False  # Rewrite over dataset if it exists
@@ -24,8 +24,8 @@ if num_frames < 25:
 else:
     keyframe_every = 5
 mapping_window_size = 32
-tracking_iters = 30
-mapping_iters = 40
+tracking_iters = 60
+mapping_iters = 60
 
 config = dict(
     workdir=f"./{base_dir}/{scene_name}",
@@ -61,7 +61,7 @@ config = dict(
         dataset_name="realsense",
         basedir="./data/realsense",
         gradslam_data_cfg="./configs/data/realsense.yaml",
-        sequence=scene_name,
+        sequence='attempt9', 
         desired_image_height=int(full_res_height // downscale_factor),
         desired_image_width=int(full_res_width // downscale_factor),
         densification_image_height=int(full_res_height // densify_downscale_factor),
@@ -72,7 +72,7 @@ config = dict(
         num_frames=-1,
     ),
     tracking=dict(
-        use_gt_poses=False,  # Use GT Poses for Tracking
+        use_gt_poses=True,  # Use GT Poses for Tracking
         forward_prop=True,  # Forward Propagate Poses
         visualize_tracking_loss=True,  # Visualize Tracking Diff Images
         num_iters=tracking_iters,
